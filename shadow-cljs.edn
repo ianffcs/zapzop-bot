@@ -1,0 +1,9 @@
+;; shadow-cljs configuration
+{:source-paths ["src"]
+ :dependencies [[org.clojure/clojurescript "1.10.773"]
+                [org.clojure/core.async "1.2.603"]
+                [funcool/promesa "5.1.0"]]
+ :builds       {:vovo {:target    :node-script
+                       :main      vovo.core/main
+                       :output-to "scripts/index.js"
+                       :devtools  {:before-load-async vovo.core/before-load}}}}

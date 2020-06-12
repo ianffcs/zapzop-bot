@@ -1,0 +1,13 @@
+{
+  "name": "zapzop",
+  "version": "0.0.1",
+  "private": true,
+  "devDependencies": {
+    "shadow-cljs": "^2.10.6"
+  },
+  "dependencies": {
+    "@open-wa/wa-automate": "^1.9.67",
+    "jimp": "^0.13.0",
+    "p-queue": "^6.4.0"
+  }
+}
