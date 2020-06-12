@@ -1,0 +1,9 @@
+* Integration With Whatsapp Bot
+ - https://github.com/open-wa/wa-automate-nodejs
+** start repl shadow
+ I'm using :
+ #+BEGIN_SRC shell
+ npx shadow-cljs -d nrepl:0.7.0 -d refactor-nrepl:2.5.0 -d
+ cider/cider-nrepl:0.25.1 server
+ #+END_SRC
+You have to change "Pessoa" to other String to find the contact on your contact list
