@@ -1,6 +1,6 @@
 (ns vovo.core
   (:require ["jimp" :as jimp]
-            ["@open-wa/wa-automate" :as wa :refer [create]]
+            ["@open-wa/wa-automate" :as wa]
             [goog.object :as gobj]
             [cljs.core.async :as async]
             [cljs.core.async :refer [go]]
@@ -77,13 +77,15 @@
               async/<!
               prn)
         #_(-> image async/<! boolean)
+        (prn "running")
         (.sendFile client
                    (-> (find-contacts! client "Pessoa")
                       async/<!
                       first)
                    (async/<! image)
                    "oooiii.jpeg"
-                   "testando o bot no cljs"))))
+                   "testando o bot no cljs")
+        (prn "finished"))))
 
 #_(go (->> (get-image! pic-gen-url)
            async/<!
