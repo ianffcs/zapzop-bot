@@ -3,14 +3,14 @@
     "version": "0.0.1",
     "private": true,
     "scripts": {
-        "dev": "npx shadow-cljs compile :vovo && node scripts/index.js"
+        "dev": "shadow-cljs compile :vovo && node scripts/index.js"
     },
   "devDependencies": {
-    "shadow-cljs": "^2.10.6"
+    "shadow-cljs": "2.10.6"
   },
   "dependencies": {
-    "@open-wa/wa-automate": "^1.9.67",
-    "jimp": "^0.13.0",
-    "p-queue": "^6.4.0"
+    "@open-wa/wa-automate": "1.9.67",
+    "jimp": "0.13.0",
+    "p-queue": "6.4.0"
   }
 }
