@@ -12,7 +12,7 @@ And start node with:
  node scripts/index.js
  #+END_SRC
 And authenticate with Whatsapp QR Code.
-PS: You have to change "Pessoa" to other String to find the contact on your contact
+PS: You have to change "Pessoa" on main function in core.cljs to other String to find the contact on your contact
 list
 ** Or run with
 #+BEGIN_SRC shell
