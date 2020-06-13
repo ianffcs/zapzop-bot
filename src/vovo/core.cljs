@@ -15,9 +15,9 @@
    "Um ótimo dia"])
 
 (def endings
-  ["meu tesouro"
-   "meu anjo"
-   "nesta"])
+  ["meu tesouro
+   meu anjo
+   nesta"])
 
 (defn get-x-pos [width text-width]
   (/ (- width text-width) 2))
@@ -66,25 +66,29 @@
 (defn find-contacts! [client n]
   (go (let [contacts (<p! (.getAllContacts client))]
         (->> contacts
-           (filter #(re-find (re-pattern n) (gobj/get % "formattedName")))
+           (filter #(#_#_re-find (re-pattern n)
+                                 = n (gobj/get % "formattedName")))
            (map #(gobj/get % "id"))
-           (map #(gobj/get % "_serialized"))))))
+           (map #(gobj/get % "_serialized"))
+           first))))
+
+(defn send-file! [client contact image]
+  (go
+    (.sendFile client
+               (async/<! (find-contacts! client contact))
+               (async/<! image)
+               "oooiii.jpeg"
+               "testando o bot no cljs")))
 
 (defn main []
   (go (let [client (<p! (wa/create))
-            image  (place-text-on-image! pic-gen-url) ]
+            image  (place-text-on-image! pic-gen-url)]
         #_(-> (find-contacts! client "Renata🖤")
               async/<!
               prn)
         #_(-> image async/<! boolean)
         (prn "running")
-        (.sendFile client
-                   (-> (find-contacts! client "Pessoa")
-                      async/<!
-                      first)
-                   (async/<! image)
-                   "oooiii.jpeg"
-                   "testando o bot no cljs")
+        (send-file! client "Pessoa" image)
         (prn "finished"))))
 
 #_(go (->> (get-image! pic-gen-url)
