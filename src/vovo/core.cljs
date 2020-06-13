@@ -77,18 +77,39 @@
     (.sendFile client
                (async/<! (find-contacts! client contact))
                (async/<! image)
-               "oooiii.jpeg"
-               "testando o bot no cljs")))
+               "hellooo.jpeg"
+               "test bot")))
+
+(defn send-image-to-contacts! [client contact-list image]
+  (go (let [c (async/chan)]
+        (loop []
+          (if-let [contact (async/>! c contact-list)]
+            (do (async/take! c (send-image-to-contact! client contact image))
+                (recur))
+            (async/close! c))))))
+
+#_(defn main []
+    (go (let [client   (<p! (wa/create))
+              image    (place-text-on-image! pic-gen-url)
+              contacts ["person1"
+                        "person2"
+                        "person3"]]
+          (prn "begin")
+          (send-image-to-contacts! client contacts image)
+          #_(send-image-to-contact! client "person1" image)
+          (prn "finished"))))
+
 
 (defn main []
   (go (let [client (<p! (wa/create))
             image  (place-text-on-image! pic-gen-url)]
-        #_(-> (find-contacts! client "Renata🖤")
+        #_(-> (find-contacts! client "person1")
               async/<!
               prn)
         #_(-> image async/<! boolean)
-        (prn "running")
-        (send-image-to-contact! client "Pessoa" image)
+        (prn "begin")
+        #_(async/<! (send-image-to-contacts! client contacts image))
+        (send-image-to-contact! client "person1" image)
         (prn "finished"))))
 
 #_(go (->> (get-image! pic-gen-url)
