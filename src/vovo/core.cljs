@@ -72,7 +72,7 @@
            (map #(gobj/get % "_serialized"))
            first))))
 
-(defn send-file! [client contact image]
+(defn send-image-to-contact! [client contact image]
   (go
     (.sendFile client
                (async/<! (find-contacts! client contact))
@@ -88,7 +88,7 @@
               prn)
         #_(-> image async/<! boolean)
         (prn "running")
-        (send-file! client "Pessoa" image)
+        (send-image-to-contact! client "Pessoa" image)
         (prn "finished"))))
 
 #_(go (->> (get-image! pic-gen-url)
