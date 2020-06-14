@@ -3,11 +3,7 @@
             ["@open-wa/wa-automate" :as wa]
             [goog.object :as gobj]
             [cljs.core.async :as async]
-            [cljs.core.async :refer [go]]
             [cljs.core.async.interop :refer-macros [<p!]]))
-
-(def pic-gen-url
-  (str "https://picsum.photos/1000?random=" (.random js/Math)))
 
 (def openings
   ["Bom dia"
@@ -24,8 +20,7 @@
 
 (defn place-top-text [image font top-text width]
   (let [text-width  (.measureText jimp font top-text)
-        text-height (.measureTextHeight jimp  font top-text)
-        #_#_width   (gobj/get image "width")]
+        text-height (.measureTextHeight jimp  font top-text)]
     (.print image
             font
             (get-x-pos width text-width)
@@ -47,70 +42,62 @@
             text-height)))
 
 (defn place-text-on-image! [url]
-  (go (let [image   (<p! (jimp/read url))
-            width   (.getWidth image)
-            height  (.getHeight image)
-            font128 (jimp/loadFont jimp/FONT_SANS_128_WHITE)
-            font64  (jimp/loadFont jimp/FONT_SANS_64_BLACK)]
-        (-> image
-           (place-top-text (<p! font128)
-                           (rand-nth openings)
-                           height)
-           (place-bot-text (<p! font64)
-                           (rand-nth endings)
-                           height
-                           width)
-           (.getBase64Async (.-MIME_JPEG jimp))
-           <p!))))
+  (async/go (let [image   (<p! (jimp/read url))
+                  width   (.getWidth image)
+                  height  (.getHeight image)
+                  font128 (jimp/loadFont jimp/FONT_SANS_128_WHITE)
+                  font64  (jimp/loadFont jimp/FONT_SANS_64_BLACK)]
+              (-> image
+                 (place-top-text (<p! font128)
+                                 (rand-nth openings)
+                                 height)
+                 (place-bot-text (<p! font64)
+                                 (rand-nth endings)
+                                 height
+                                 width)
+                 (.getBase64Async (.-MIME_JPEG jimp))
+                 <p!))))
 
-(defn find-contacts! [client n]
-  (go (let [contacts (<p! (.getAllContacts client))]
-        (->> contacts
-           (filter #(#_#_re-find (re-pattern n)
-                                 = n (gobj/get % "formattedName")))
-           (map #(gobj/get % "id"))
-           (map #(gobj/get % "_serialized"))
-           first))))
+(defn filter-contacts [contacts n]
+  (->> contacts
+     (filter #(= n (gobj/get % "formattedName")))
+     (map #(gobj/get % "id"))
+     first))
 
-(defn send-image-to-contact! [client contact image]
-  (go
-    (.sendFile client
-               (async/<! (find-contacts! client contact))
-               (async/<! image)
-               "hellooo.jpeg"
-               "test bot")))
+(defn send-image-to-contact! [future-client future-contact future-img]
+  (let [p (async/promise-chan)
+        _ (prn [:outside-go future-contact (count (str future-img))])]
+    (async/go
+      (let [promise (.sendFile future-client
+                               future-contact
+                               future-img
+                               "hellooo.jpeg"
+                               "test bot")]
+        (.then promise (fn [v]
+                         (prn [:then v])
+                         (async/>! p v)))
+        (.catch promise (fn [v]
+                          (prn [:error v])
+                          (async/>! p v)))))
+    p))
 
-(defn send-image-to-contacts! [client contact-list image]
-  (go (let [c (async/chan)]
-        (loop []
-          (if-let [contact (async/>! c contact-list)]
-            (do (async/take! c (send-image-to-contact! client contact image))
-                (recur))
-            (async/close! c))))))
-
-#_(defn main []
-    (go (let [client   (<p! (wa/create))
-              image    (place-text-on-image! pic-gen-url)
-              contacts ["person1"
-                        "person2"
-                        "person3"]]
-          (prn "begin")
-          (send-image-to-contacts! client contacts image)
-          #_(send-image-to-contact! client "person1" image)
-          (prn "finished"))))
-
+(defn pic-gen-url []
+  (str "https://picsum.photos/1000?random=" (.random js/Math)))
 
 (defn main []
-  (go (let [client (<p! (wa/create))
-            image  (place-text-on-image! pic-gen-url)]
-        #_(-> (find-contacts! client "person1")
-              async/<!
-              prn)
-        #_(-> image async/<! boolean)
-        (prn "begin")
-        #_(async/<! (send-image-to-contacts! client contacts image))
-        (send-image-to-contact! client "person1" image)
-        (prn "finished"))))
+  (let [contact-list  ["person1" "person2"]
+        contacts+urls (vec (for [contact contact-list]
+                             [contact (pic-gen-url)]))]
+    (prn "begin")
+    (async/go
+      (let [client   (<p! (wa/create))
+            contacts (async/<! (async/go (<p! (.getAllContacts client))))
+            #_#__    (prn [:inside-go (str (count img)) (count contacts)])]
+        (doseq [[contact url] contacts+urls]
+          (send-image-to-contact! client
+                                  (filter-contacts contacts contact)
+                                  (async/<! (place-text-on-image! url))))))
+    (prn "finished")))
 
 #_(go (->> (get-image! pic-gen-url)
            async/<!
