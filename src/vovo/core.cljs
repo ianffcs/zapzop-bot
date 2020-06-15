@@ -100,12 +100,15 @@
 (defn pic-gen-url []
   (str "https://picsum.photos/1000?random=" (.random js/Math)))
 
+(defn name-list->names+url [name-list]
+  (vec (for [name name-list]
+         [name (pic-gen-url)])))
+
 (defn main []
   (let [name-list ["pessoa1"
                    "pessoa2"
                    "pessoa3"]
-        names+url (vec (for [name name-list]
-                         [name (pic-gen-url)]))]
+        names+url (name-list->names+url name-list)]
     (prn "begin")
     (async/go
       (let [client   (<p! (wa/create))
