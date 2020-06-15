@@ -3,8 +3,7 @@
             ["@open-wa/wa-automate" :as wa]
             [goog.object :as gobj]
             [cljs.core.async :as async]
-            [cljs.core.async.interop :refer-macros [<p!]]
-            [net.cgrand.xforms :as xf]))
+            [cljs.core.async.interop :refer-macros [<p!]]))
 
 (def openings
   ["Bom dia"
@@ -63,14 +62,17 @@
   (async/go
     (<p! (.getAllContacts future-client))))
 
-(defn get-contact-id! [future-contacts n]
-  (let [p (async/promise-chan)]
-    (->> future-contacts
-       (filter #(= n (gobj/get % "formattedName")))
-       (keep #(gobj/get % "id"))
-       first
-       (async/put! p))
-    p))
+(defn get-contact-id [contacts n] ;; see what happens here
+  (->> contacts
+     (filter #(= n (gobj/get % "formattedName")))
+     (keep #(gobj/get % "id"))
+     first))
+
+(defn get-contacts-id [contacts name-list]
+  (keep #(get-contact-id contacts %) name-list))
+
+(defn pic-gen-url []
+  (str "https://picsum.photos/1000?random=" (.random js/Math)))
 
 (defn send-image-to-contact! [future-client
                               future-contact-id
@@ -83,37 +85,31 @@
                         "test bot")]
     (async/go (<p! sent))))
 
-(defn send-image-to-contacts! [future-client future-contacts names+url]
-  (let [p (async/promise-chan)]
-    (async/put! p
-                (async/go
-                  (doseq [[n url] names+url]
-                    (let [contact-id (async/<! (get-contact-id! future-contacts n))
-                          img        (async/<! (place-text-on-image! url))]
-                      (prn [contact-id (count (str img))])
-                      (when-not (nil? contact-id)
-                        (async/<! (send-image-to-contact! future-client
-                                                          contact-id
-                                                          img)))))))
+(defn send-image-to-contacts! [future-client future-contact-ids]
+  (let [ids+urls (vec (for [id future-contact-ids]
+                        [id (pic-gen-url)]))
+        p        (async/promise-chan)]
+    (prn ids+urls)
+    (async/go
+      (doseq [[id url] ids+urls]
+        (async/<! (send-image-to-contact!
+                   future-client
+                   id
+                   (async/<! (place-text-on-image! url))))))
     p))
 
-(defn pic-gen-url []
-  (str "https://picsum.photos/1000?random=" (.random js/Math)))
-
-(defn name-list->names+url [name-list]
-  (vec (for [name name-list]
-         [name (pic-gen-url)])))
-
 (defn main []
-  (let [name-list ["pessoa1"
-                   "pessoa2"
-                   "pessoa3"]
-        names+url (name-list->names+url name-list)]
+  (let [name-list ["person1"
+                   "person2"
+                   "person3"]]
     (prn "begin")
     (async/go
       (let [client   (<p! (wa/create))
-            contacts (async/<! (get-contacts! client))]
-        (async/<! (send-image-to-contacts! client contacts names+url))))
+            contacts (async/<! (get-contacts! client))
+            ids      (get-contacts-id contacts name-list)]
+        (prn ids)
+        (prn (async/<! (send-image-to-contacts! client ids)))
+        ))
     (prn "finished")))
 
 (comment
