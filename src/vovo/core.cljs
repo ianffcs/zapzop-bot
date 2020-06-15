@@ -3,7 +3,8 @@
             ["@open-wa/wa-automate" :as wa]
             [goog.object :as gobj]
             [cljs.core.async :as async]
-            [cljs.core.async.interop :refer-macros [<p!]]))
+            [cljs.core.async.interop :refer-macros [<p!]]
+            [net.cgrand.xforms :as xf]))
 
 (def openings
   ["Bom dia"
@@ -58,46 +59,91 @@
                  (.getBase64Async (.-MIME_JPEG jimp))
                  <p!))))
 
-(defn filter-contacts [contacts n]
-  (->> contacts
-     (filter #(= n (gobj/get % "formattedName")))
-     (map #(gobj/get % "id"))
-     first))
+(defn get-contacts! [future-client]
+  (async/go
+    (<p! (.getAllContacts future-client))))
 
-(defn send-image-to-contact! [future-client future-contact future-img]
-  (let [p (async/promise-chan)
-        _ (prn [:outside-go future-contact (count (str future-img))])]
-    (async/go
-      (let [promise (.sendFile future-client
-                               future-contact
-                               future-img
-                               "hellooo.jpeg"
-                               "test bot")]
-        (.then promise (fn [v]
-                         (prn [:then v])
-                         (async/>! p v)))
-        (.catch promise (fn [v]
-                          (prn [:error v])
-                          (async/>! p v)))))
+(defn get-contact-id! [future-contacts n]
+  (let [p (async/promise-chan)]
+    (->> future-contacts
+       (filter #(= n (gobj/get % "formattedName")))
+       (keep #(gobj/get % "id"))
+       first
+       (async/put! p))
+    p))
+
+(defn send-image-to-contact! [future-client
+                              future-contact-id
+                              future-img]
+  (prn [:outside-go future-contact-id (count (str future-img))])
+  (let [sent (.sendFile future-client
+                        future-contact-id
+                        future-img
+                        "hellooo.jpeg"
+                        "test bot")]
+    (async/go (<p! sent))))
+
+(defn send-image-to-contacts! [future-client future-contacts names+url]
+  (let [p (async/promise-chan)]
+    (async/put! p
+                (async/go
+                  (doseq [[n url] names+url]
+                    (let [contact-id (async/<! (get-contact-id! future-contacts n))
+                          img        (async/<! (place-text-on-image! url))]
+                      (prn [contact-id (count (str img))])
+                      (when-not (nil? contact-id)
+                        (async/<! (send-image-to-contact! future-client
+                                                          contact-id
+                                                          img)))))))
     p))
 
 (defn pic-gen-url []
   (str "https://picsum.photos/1000?random=" (.random js/Math)))
 
 (defn main []
-  (let [contact-list  ["person1" "person2"]
-        contacts+urls (vec (for [contact contact-list]
-                             [contact (pic-gen-url)]))]
+  (let [name-list ["pessoa1"
+                   "pessoa2"
+                   "pessoa3"]
+        names+url (vec (for [name name-list]
+                         [name (pic-gen-url)]))]
     (prn "begin")
     (async/go
       (let [client   (<p! (wa/create))
-            contacts (async/<! (async/go (<p! (.getAllContacts client))))
-            #_#__    (prn [:inside-go (str (count img)) (count contacts)])]
-        (doseq [[contact url] contacts+urls]
-          (send-image-to-contact! client
-                                  (filter-contacts contacts contact)
-                                  (async/<! (place-text-on-image! url))))))
+            contacts (async/<! (get-contacts! client))]
+        (async/<! (send-image-to-contacts! client contacts names+url))))
     (prn "finished")))
+
+(comment
+  (defn callback->promise
+    [f]
+    (let [p (new js/Promise)]
+      (f (fn [ok]
+           (.resolve p ok))
+         (fn [err]
+           (.reject p err)))))
+
+  (defn callback->async
+    [f]
+    (let [p (async/promise-chan)]
+      ;; core.async do not handle exceptions nor nil as value
+      (f (fn [ok]
+           (async/put! p (if (nil? ok)
+                           ::nil
+                           ok))))
+      p))
+  (defn promise->async
+    [p]
+    (let [chan (async/promise-chan)]
+      (.then p (fn [ok]
+                 (fn [ok]
+                   (async/put! chan (if (nil? ok)
+                                      ::nil
+                                      ok)))))
+      chan))
+  (defn async->callback
+    [chan on-ok]
+    (async/go
+      (on-ok (async/<! chan)))))
 
 #_(go (->> (get-image! pic-gen-url)
            async/<!
