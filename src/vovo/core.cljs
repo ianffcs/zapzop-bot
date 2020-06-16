@@ -98,16 +98,22 @@
                    (async/<! (place-text-on-image! url))))))
     p))
 
+(defn send-text! [future-client future-contact-id msg]
+  (prn [:outside-go future-contact-id msg])
+  (let [sent (.sendText future-client future-contact-id msg)]
+    (async/go (<p! sent))))
+
 (defn main []
-  (let [name-list ["person1"
-                   "person2"
-                   "person3"]]
+  (let [name-list ["Rodrigo Bizzo"
+                   "Renata🖤"
+                   "Kinder 🥝"]]
     (prn "begin")
     (async/go
       (let [client   (<p! (wa/create))
             contacts (async/<! (get-contacts! client))
             ids      (get-contacts-id contacts name-list)]
         (prn ids)
+        (prn (async/<! (send-text! client (second ids) "aa")))
         (prn (async/<! (send-image-to-contacts! client ids)))
         ))
     (prn "finished")))
