@@ -104,17 +104,17 @@
     (async/go (<p! sent))))
 
 (defn main []
-  (let [name-list ["Rodrigo Bizzo"
-                   "Renata🖤"
-                   "Kinder 🥝"]]
+  (let [name-list ["person1"
+                   "person2"
+                   "person3"]]
     (prn "begin")
     (async/go
       (let [client   (<p! (wa/create))
             contacts (async/<! (get-contacts! client))
             ids      (get-contacts-id contacts name-list)]
         (prn ids)
-        (prn (async/<! (send-text! client (second ids) "aa")))
-        (prn (async/<! (send-image-to-contacts! client ids)))
+        #_(prn (async/<! (send-text! client (second ids) "aa")))
+        #_(prn (async/<! (send-image-to-contacts! client ids)))
         ))
     (prn "finished")))
 
