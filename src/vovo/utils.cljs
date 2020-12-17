@@ -1,7 +1,5 @@
 (ns vovo.utils
-  (:require ["fs" :as fs]
-            [com.wsscode.async.async-cljs :refer [go-promise <? <!p]]
-            [cljs.core.async :as async]))
+  (:require [cljs.core.async :as async]))
 
 (defn callback->promise
   [f]
