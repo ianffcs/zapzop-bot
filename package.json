@@ -6,11 +6,11 @@
     "dev": "shadow-cljs compile :vovo && node scripts/index.js"
   },
   "devDependencies": {
-    "shadow-cljs": "2.10.6"
+    "shadow-cljs": "2.11.8"
   },
   "dependencies": {
-    "@open-wa/wa-automate": "^1.9.105",
-    "jimp": "0.13.0",
-    "p-queue": "6.4.0"
+    "@open-wa/wa-automate": "^3.1.10",
+    "jimp": "0.16.1",
+    "p-queue": "6.6.2"
   }
 }
