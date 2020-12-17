@@ -8,6 +8,7 @@ pom.xml.asc
 *.iml
 *.jar
 *.log
+package-lock.json
 .shadow-cljs
 .idea
 .lein-*
