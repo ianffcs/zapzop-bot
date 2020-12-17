@@ -1,9 +1,8 @@
-;; shadow-cljs configuration
 {:source-paths ["src"]
  :dependencies [[org.clojure/clojurescript "1.10.773"]
-                [org.clojure/core.async "1.2.603"]
                 [net.cgrand/xforms "0.19.2"]
-                [com.wsscode/pathom "2.3.0"]]
+                [com.wsscode/pathom "2.3.0"]
+                [com.wsscode/async "1.0.13"]]
  :builds       {:vovo {:target    :node-script
                        :main      vovo.core/main
                        :output-to "scripts/index.js"}}}
