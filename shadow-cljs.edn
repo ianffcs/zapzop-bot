@@ -3,8 +3,7 @@
  :dependencies [[org.clojure/clojurescript "1.10.773"]
                 [org.clojure/core.async "1.2.603"]
                 [net.cgrand/xforms "0.19.2"]
-                [funcool/promesa "5.1.0"]]
+                [com.wsscode/pathom "2.3.0"]]
  :builds       {:vovo {:target    :node-script
                        :main      vovo.core/main
-                       :output-to "scripts/index.js"
-                       :devtools  {:before-load-async vovo.core/before-load}}}}
+                       :output-to "scripts/index.js"}}}

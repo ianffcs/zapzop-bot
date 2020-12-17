@@ -139,12 +139,12 @@
   (defn promise->async
     [p]
     (let [chan (async/promise-chan)]
-      (.then p (fn [ok]
-                 (fn [ok]
-                   (async/put! chan (if (nil? ok)
-                                      ::nil
-                                      ok)))))
+      (.then p  (fn [ok]
+                  (async/put! chan (if (nil? ok)
+                                     ::nil
+                                     ok))))
       chan))
+
   (defn async->callback
     [chan on-ok]
     (async/go
@@ -158,6 +158,6 @@
            async/<!
            prn))
 
-(defn before-load []
+(defn ^:dev/before-load before-load []
   #_(main)
   (prn "loading..."))
