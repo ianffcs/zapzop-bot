@@ -1,21 +1,10 @@
 (ns vovo.core
   (:require ["jimp" :as jimp]
             ["@open-wa/wa-automate" :as wa]
+            ["fs/promises" :as fs]
             [goog.object :as gobj]
             [cljs.core.async :as async :refer [<! >!]]
             [com.wsscode.async.async-cljs :refer [go-promise <? <!p]]))
-
-(def config-map
-  {:names ["Kinder 🥝"
-           "Enzzo"
-           "Ingrid"]
-   :msgs ["MSG AUTOMATICA: melhorei muito em mexer com promises yey :D"]
-   :openings ["Bom dia"
-              "Deus te abençoe"
-              "Um ótimo dia"]
-   :endings ["meu tesouro"
-             "nesta"
-             "meu anjo"]})
 
 (defn get-x-pos [width text-width]
   (/ (- width text-width) 2))
@@ -115,25 +104,31 @@
 (defn main []
   (go-promise
    (let [{:keys [names
-                 msgs]} config-map
+                 msgs]} (or (async/go (-> "example-input.json"
+                                          fs/readFile
+                                          <!p
+                                          js/JSON.parse
+                                          (js->clj :keywordize-keys true)))
+                            #_config-map)
          client (<!p (wa/create))
          contacts (<!p (get-all-contacs client))
          ids (names->ids contacts names)]
      (prn "begin")
+     (prn names)
      (prn ids)
-     (doseq [id ids
-             msg msgs]
-       (<!p  (send-text client {:id id
-                                :msg msg})))
-     (doseq [id ids]
-       (<!p (send-image client {:id id
-                                :file "/home/ianffcs/Imagens/anarchydoggo.jpg"
-                                :filename "anarchydoggo.jpg"
-                                :caption "AUTO: doggo"})))
+     (prn msgs)
+     #_(doseq [id ids
+               msg msgs]
+         (<!p  (send-text client {:id id
+                                  :msg msg})))
+     #_(doseq [id ids]
+         (<!p (send-image client {:id id
+                                  :file "/home/ianffcs/Imagens/anarchydoggo.jpg"
+                                  :filename "anarchydoggo.jpg"
+                                  :caption "AUTO: doggo"})))
      (prn "finished"))))
 
-#_(main)
-#_(reset! state nil)
+#_(async/go (<!p (utils/read-config-map "./example-input.json")))
 #_(go (->> (get-image! pic-gen-url)
            async/<!
            prn))
