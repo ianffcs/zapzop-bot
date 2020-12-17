@@ -32,7 +32,8 @@
 
 (defn main []
   (go-promise
-   (let [{:keys [names
+   (let [config-map nil
+         {:keys [names
                  msgs]} (or config-map
                             (async/go (-> "example-input.json"
                                           fs/readFile
