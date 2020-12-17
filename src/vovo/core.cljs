@@ -2,18 +2,20 @@
   (:require ["jimp" :as jimp]
             ["@open-wa/wa-automate" :as wa]
             [goog.object :as gobj]
-            [cljs.core.async :as async]
-            [cljs.core.async.interop :refer-macros [<p!]]))
+            [cljs.core.async :as async :refer [<! >!]]
+            [com.wsscode.async.async-cljs :refer [go-promise <? <!p]]))
 
-(def openings
-  ["Bom dia"
-   "Deus te abençoe"
-   "Um ótimo dia"])
-
-(def endings
-  ["meu tesouro
-   meu anjo
-   nesta"])
+(def config-map
+  {:names ["Kinder 🥝"
+           "Enzzo"
+           "Ingrid"]
+   :msgs ["MSG AUTOMATICA: melhorei muito em mexer com promises yey :D"]
+   :openings ["Bom dia"
+              "Deus te abençoe"
+              "Um ótimo dia"]
+   :endings ["meu tesouro"
+             "nesta"
+             "meu anjo"]})
 
 (defn get-x-pos [width text-width]
   (/ (- width text-width) 2))
@@ -41,83 +43,97 @@
             width
             text-height)))
 
-(defn place-text-on-image! [url]
-  (async/go (let [image   (<p! (jimp/read url))
-                  width   (.getWidth image)
-                  height  (.getHeight image)
-                  font128 (jimp/loadFont jimp/FONT_SANS_128_WHITE)
-                  font64  (jimp/loadFont jimp/FONT_SANS_64_BLACK)]
-              (-> image
-                 (place-top-text (<p! font128)
-                                 (rand-nth openings)
-                                 height)
-                 (place-bot-text (<p! font64)
-                                 (rand-nth endings)
-                                 height
-                                 width)
-                 (.getBase64Async (.-MIME_JPEG jimp))
-                 <p!))))
-
-(defn get-contacts! [future-client]
-  (async/go
-    (<p! (.getAllContacts future-client))))
-
-(defn get-contact-id [contacts n] ;; see what happens here
-  (->> contacts
-     (filter #(= n (gobj/get % "formattedName")))
-     (keep #(gobj/get % "id"))
-     first))
-
-(defn get-contacts-id [contacts name-list]
-  (keep #(get-contact-id contacts %) name-list))
+#_(defn place-text-on-image! [{:keys [openings
+                                      endings]} url]
+    (async/go (let [image   (<!p (jimp/read url))
+                    width   (.getWidth image)
+                    height  (.getHeight image)
+                    font128 (jimp/loadFont jimp/FONT_SANS_128_WHITE)
+                    font64  (jimp/loadFont jimp/FONT_SANS_64_BLACK)]
+                (-> image
+                    (place-top-text (<!p font128)
+                                    (rand-nth openings)
+                                    height)
+                    (place-bot-text (<!p font64)
+                                    (rand-nth endings)
+                                    height
+                                    width)
+                    (.getBase64Async (.-MIME_JPEG jimp))
+                    <!p))))
 
 (defn pic-gen-url []
   (str "https://picsum.photos/1000?random=" (.random js/Math)))
 
-(defn send-image-to-contact! [future-client
-                              future-contact-id
-                              future-img]
-  (prn [:outside-go future-contact-id (count (str future-img))])
-  (let [sent (.sendFile future-client
-                        future-contact-id
-                        future-img
-                        "hellooo.jpeg"
-                        "test bot")]
-    (async/go (<p! sent))))
+#_(defn send-image-to-contact! [future-client
+                                future-contact-id
+                                future-img]
+    (prn [:outside-go future-contact-id (count (str future-img))])
+    (let [sent (.sendFile future-client
+                          future-contact-id
+                          future-img
+                          "hellooo.jpeg"
+                          "test bot")]
+      (async/go (<!p sent))))
 
-(defn send-image-to-contacts! [future-client future-contact-ids]
-  (let [ids+urls (vec (for [id future-contact-ids]
-                        [id (pic-gen-url)]))
-        p        (async/promise-chan)]
-    (prn ids+urls)
-    (async/go
-      (doseq [[id url] ids+urls]
-        (async/<! (send-image-to-contact!
-                   future-client
-                   id
-                   (async/<! (place-text-on-image! url))))))
-    p))
+#_(defn send-image-to-contacts! [config-map future-client future-contact-ids]
+    (let [ids+urls (vec (for [id future-contact-ids]
+                          [id (pic-gen-url)]))
+          p        (async/promise-chan)]
+      (prn ids+urls)
+      (async/go
+        (doseq [[id url] ids+urls]
+          (async/<! (send-image-to-contact!
+                     future-client
+                     id
+                     (async/<! (place-text-on-image! config-map url))))))
+      p))
 
-(defn send-text! [future-client future-contact-id msg]
-  (prn [:outside-go future-contact-id msg])
-  (let [sent (.sendText future-client future-contact-id msg)]
-    (async/go (<p! sent))))
+(defn get-all-contacs [client]
+  (.getAllContacts ^js client))
+
+(defn send-text [client {:keys [id msg]}]
+  (.sendText ^js client id msg))
+
+(defn send-image [client {:keys [id
+                                 file
+                                 filename
+                                 caption
+                                 quotedMsgId?
+                                 waitForId?
+                                 withoutPreview?]}]
+  (.sendImage ^js client id file filename caption))
+
+(defn name->id [contacts name] ;; see what happens here
+  (->> contacts
+       (filter #(= name (gobj/get % "formattedName")))
+       (keep #(gobj/get % "id"))
+       first))
+
+(defn names->ids [contacts names]
+  (keep #(name->id contacts %) names))
 
 (defn main []
-  (let [name-list ["person1"
-                   "person2"
-                   "person3"]]
-    (prn "begin")
-    (async/go
-      (let [client   (<p! (wa/create))
-            contacts (async/<! (get-contacts! client))
-            ids      (get-contacts-id contacts name-list)]
-        (prn ids)
-        #_(prn (async/<! (send-text! client (second ids) "aa")))
-        #_(prn (async/<! (send-image-to-contacts! client ids)))
-        ))
-    (prn "finished")))
+  (go-promise
+   (let [{:keys [names
+                 msgs]} config-map
+         client (<!p (wa/create))
+         contacts (<!p (get-all-contacs client))
+         ids (names->ids contacts names)]
+     (prn "begin")
+     (prn ids)
+     (doseq [id ids
+             msg msgs]
+       (<!p  (send-text client {:id id
+                                :msg msg})))
+     (doseq [id ids]
+       (<!p (send-image client {:id id
+                                :file "/home/ianffcs/Imagens/anarchydoggo.jpg"
+                                :filename "anarchydoggo.jpg"
+                                :caption "AUTO: doggo"})))
+     (prn "finished"))))
 
+#_(main)
+#_(reset! state nil)
 #_(go (->> (get-image! pic-gen-url)
            async/<!
            prn))
